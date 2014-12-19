@@ -1,0 +1,76 @@
+---
+title: "Practical Machine Learning Project"
+author: "Amit Nagar"
+date: "Sunday, December 07, 2014"
+output: html_document
+---
+
+```{r echo=FALSE}
+setwd("C:\\Users\\I013285\\Documents\\Amit\\CourseraR\\PML\\project")
+library(caret)
+require(leaps)
+require(MASS)
+library(forecast)
+library(randomForest)
+```
+
+Read exercise data
+```{r echo=TRUE}
+pmlData<-read.table(file="pml-training.csv",header=TRUE, sep=",")
+```
+
+Data cleanup: Remove some of the columns that are not relevant for prediction.  Also, remove columns with NA values
+```{r}
+pmlTrain1<-subset(pmlData,,-c(X, user_name, raw_timestamp_part_1, raw_timestamp_part_2, cvtd_timestamp,new_window, num_window))
+
+pmlTrain2<-pmlTrain1[, apply(pmlTrain1, 2, function(x) !any(is.na(x)))]
+```
+
+
+Now we will partition data into smaller sets
+```{r echo=FALSE}
+inTrain<-createDataPartition(y=pmlTrain2$classe,p=0.7,list=FALSE)
+
+pmlTrain<-pmlTrain2[inTrain,]
+
+pmlTest<-pmlTrain2[-inTrain,]
+```
+
+Preprocess - Standardize Variables
+```{r echo=TRUE}
+preObj<-preProcess(pmlTrain[,-53],method=c("center","scale"))
+```
+
+Estimate the out of sample error
+```{r echo=TRUE}
+outOfSampleErrorEstimate <- rfcv(trainx = pmlTrain[,-53], trainy = pmlTrain[,53], step=0.7)
+```
+
+The Out of Sample estimated error will be:
+```{r echo=FALSE}
+outOfSampleErrorEstimate[[2]]
+```
+
+
+Apply RandomForest to pmlTrain3 dataset
+```{r echo=TRUE}
+modelFit <- train(classe~.,data=pmlTrain, preProcess=c("center","scale"),method="rf")
+print(modelFit)
+```
+
+```{r echo=TRUE}
+testModel<-predict(modelFit,pmlTest)
+```
+
+##Generate predictions with the Test data
+
+```{r echo=TRUE}
+pmlRealTestData<-read.table(file="pml-testing.csv",header=TRUE, sep=",")
+
+prediction <-predict(modelFit,pmlRealTestData)
+
+print(prediction)
+
+```
+
+
